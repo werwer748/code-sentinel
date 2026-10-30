@@ -1,0 +1,72 @@
+[
+  {
+    "id": "IN-01",
+    "description": "pull_request_target workflow checks out and runs the PR head (npm ci, docs build) in a job that has a repository secret and a write-scoped token",
+    "file": ".github/workflows/preview.yml",
+    "lineRange": [3, 32],
+    "area": "security",
+    "minSeverity": "High",
+    "mustDetect": true,
+    "anchor": "pull_request_target:"
+  },
+  {
+    "id": "IN-02",
+    "description": "Dockerfile uses the floating node:latest tag and never drops root (no USER); the image is not on the deploy path (deploy.yml ships a tarball over SSH), so Low",
+    "file": "Dockerfile",
+    "lineRange": [1, 10],
+    "area": ["security", "ops"],
+    "minSeverity": "Low",
+    "mustDetect": true,
+    "anchor": "FROM node:latest"
+  },
+  {
+    "id": "IN-03",
+    "description": "rm -rf on an unquoted variable path while pruning releases (word splitting/globbing on the production host)",
+    "file": "scripts/deploy.sh",
+    "lineRange": [27, 33],
+    "area": ["ops", "security", "correctness"],
+    "minSeverity": "Medium",
+    "mustDetect": true,
+    "anchor": "rm -rf $RELEASES_DIR/$old"
+  },
+  {
+    "id": "IN-04",
+    "description": "Third-party action referenced by a mutable branch (@main) instead of a commit SHA, and it receives AWS credentials",
+    "file": ".github/workflows/deploy.yml",
+    "lineRange": [49, 58],
+    "area": "security",
+    "minSeverity": "Medium",
+    "mustDetect": true,
+    "anchor": "uses: s3-deploy-tools/sync-action@main"
+  },
+  {
+    "id": "IN-D1",
+    "description": "Decoy: public-read docs bucket, intentionally public and documented (ADR 0007); ACLs blocked, GetObject only",
+    "file": "infra/docs-site.tf",
+    "lineRange": [1, 43],
+    "area": ["security"],
+    "mustDetect": false,
+    "mustNotFlag": true,
+    "anchor": "Public by design"
+  },
+  {
+    "id": "IN-D2",
+    "description": "Decoy: 0.0.0.0/0 and ::/0 ingress on 443 only, for an intentionally public API load balancer (documented in the file)",
+    "file": "infra/alb.tf",
+    "lineRange": [8, 26],
+    "area": ["security"],
+    "mustDetect": false,
+    "mustNotFlag": true,
+    "anchor": "cidr_ipv4         = \"0.0.0.0/0\""
+  },
+  {
+    "id": "IN-D3",
+    "description": "Decoy: rm -rf in an EXIT trap, but the path is quoted, comes from mktemp -d and is passed after --",
+    "file": "scripts/deploy.sh",
+    "lineRange": [14, 15],
+    "area": ["ops", "correctness", "security"],
+    "mustDetect": false,
+    "mustNotFlag": true,
+    "anchor": "trap 'rm -rf -- \"$staging_dir\"' EXIT"
+  }
+]

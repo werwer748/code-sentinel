@@ -1,0 +1,32 @@
+name: docs-preview
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run docs:build
+      - name: Upload preview
+        env:
+          PREVIEW_UPLOAD_TOKEN: ${{ secrets.PREVIEW_UPLOAD_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          tar -czf preview.tgz -C docs/dist .
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${PREVIEW_UPLOAD_TOKEN}" \
+            --data-binary @preview.tgz \
+            "https://previews.example.com/api/upload?pr=${PR_NUMBER}"

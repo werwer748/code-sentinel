@@ -1,0 +1,22 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install shellcheck
+        run: brew install shellcheck
+      - name: Show shells
+        run: |
+          /bin/bash --version | head -1
+          git --version
+      - name: Run tests with /bin/bash 3.2
+        run: /bin/bash tests/run.sh

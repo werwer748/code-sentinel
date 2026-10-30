@@ -1,0 +1,3 @@
+.DS_Store
+# 품질 검증 실행 결과(원본 출력)는 tests/REVIEW-QUALITY.md 에 요약하고 커밋하지 않는다
+/tests/quality-runs/

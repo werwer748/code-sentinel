@@ -1,0 +1,102 @@
+[
+  {
+    "id": "BE-01",
+    "description": "IDOR: invoice detail is looked up by id only, without checking that it belongs to the caller",
+    "file": "src/routes/invoices.ts",
+    "lineRange": [25, 34],
+    "area": "security",
+    "minSeverity": "High",
+    "mustDetect": true,
+    "anchor": "FROM invoices WHERE id = $1"
+  },
+  {
+    "id": "BE-02",
+    "description": "SQL built by string interpolation of the category path parameter (public endpoint)",
+    "file": "src/routes/products.ts",
+    "lineRange": [32, 36],
+    "area": "security",
+    "minSeverity": "High",
+    "mustDetect": true,
+    "anchor": "WHERE category = '${req.params.category}'"
+  },
+  {
+    "id": "BE-03",
+    "description": "NOT NULL column without default added to an existing table and used right away by the new code (migration fails on existing rows; old code breaks during rollout)",
+    "file": "migrations/002_wallets_invoices_currency.sql",
+    "lineRange": [21, 21],
+    "area": ["ops", "correctness"],
+    "minSeverity": "Medium",
+    "mustDetect": true,
+    "anchor": "ADD COLUMN currency CHAR(3) NOT NULL"
+  },
+  {
+    "id": "BE-04",
+    "description": "N+1 query: order items are fetched with one query per order in the list endpoint",
+    "file": "src/routes/orders.ts",
+    "lineRange": [76, 83],
+    "area": "performance",
+    "minSeverity": "Medium",
+    "mustDetect": true,
+    "anchor": "WHERE order_id = $1"
+  },
+  {
+    "id": "BE-05",
+    "description": "Wallet payment reads the balance, checks it and writes the new absolute balance without a transaction or row lock (double spend / lost update)",
+    "file": "src/routes/wallet.ts",
+    "lineRange": [35, 46],
+    "area": "correctness",
+    "minSeverity": "Medium",
+    "mustDetect": true,
+    "anchor": "UPDATE wallets SET balance_cents = $1"
+  },
+  {
+    "id": "BE-06",
+    "description": "Card charge is retried on timeouts/5xx without an idempotency key (duplicate charges)",
+    "file": "src/services/paymentGateway.ts",
+    "lineRange": [30, 60],
+    "area": ["correctness", "ops"],
+    "minSeverity": "Medium",
+    "mustDetect": true,
+    "anchor": "for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++)"
+  },
+  {
+    "id": "BE-07",
+    "description": "Cancel swallows every error (not found, not cancellable, DB failure) and still answers 200 with status cancelled",
+    "file": "src/routes/orders.ts",
+    "lineRange": [139, 153],
+    "area": ["correctness", "ops"],
+    "minSeverity": "Medium",
+    "mustDetect": true,
+    "anchor": "console.warn('order cancel failed'"
+  },
+  {
+    "id": "BE-08",
+    "description": "Public response field renamed from totalCents to amountCents (breaking API contract for existing clients)",
+    "file": "src/routes/orders.ts",
+    "lineRange": [31, 31],
+    "area": ["architecture", "correctness"],
+    "minSeverity": "Medium",
+    "mustDetect": true,
+    "anchor": "amountCents: row.total_cents"
+  },
+  {
+    "id": "BE-D1",
+    "description": "Decoy: dynamically assembled WHERE clause, but every value is a bound parameter ($n placeholders)",
+    "file": "src/routes/products.ts",
+    "lineRange": [14, 26],
+    "area": ["security", "correctness"],
+    "mustDetect": false,
+    "mustNotFlag": true,
+    "anchor": "sql += ` AND category = $${params.length}`"
+  },
+  {
+    "id": "BE-D2",
+    "description": "Decoy: stock check and decrement inside the caller's transaction with SELECT ... ORDER BY id FOR UPDATE",
+    "file": "src/services/inventory.ts",
+    "lineRange": [13, 39],
+    "area": ["correctness", "performance"],
+    "mustDetect": false,
+    "mustNotFlag": true,
+    "anchor": "ORDER BY id FOR UPDATE"
+  }
+]

@@ -1,0 +1,112 @@
+[
+  {
+    "id": "FE-01",
+    "description": "Client component imports and calls the server-only pricing module; Next.js empties non-NEXT_PUBLIC_ env vars in the client bundle, so member prices silently stop rendering (no token leak)",
+    "file": "src/components/PriceTag.tsx",
+    "lineRange": [5, 21],
+    "area": ["correctness", "architecture"],
+    "minSeverity": "Medium",
+    "mustDetect": true,
+    "anchor": "import { getMemberPrice } from '@/lib/server/pricing';"
+  },
+  {
+    "id": "FE-02",
+    "description": "Date.now() evaluated during render (useState initializer) differs between server render and hydration -> hydration mismatch",
+    "file": "src/components/DealBanner.tsx",
+    "lineRange": [14, 22],
+    "area": "correctness",
+    "minSeverity": "Medium",
+    "mustDetect": true,
+    "anchor": "useState(() => Date.now())"
+  },
+  {
+    "id": "FE-03",
+    "description": "User-generated review HTML rendered with dangerouslySetInnerHTML without sanitization (stored XSS)",
+    "file": "src/components/ReviewList.tsx",
+    "lineRange": [17, 17],
+    "area": "security",
+    "minSeverity": "High",
+    "mustDetect": true,
+    "anchor": "dangerouslySetInnerHTML={{ __html: review.bodyHtml }}"
+  },
+  {
+    "id": "FE-04",
+    "description": "Polling interval is never cleared (no effect cleanup): leaks on unmount and stacks up on every productId change",
+    "file": "src/components/StockBadge.tsx",
+    "lineRange": [16, 26],
+    "area": ["correctness", "performance"],
+    "minSeverity": "Medium",
+    "mustDetect": true,
+    "anchor": "setInterval(refresh, 15_000);"
+  },
+  {
+    "id": "FE-05",
+    "description": "Optimistic helpful-vote update is not rolled back when the request fails or is rejected",
+    "file": "src/components/HelpfulButton.tsx",
+    "lineRange": [9, 21],
+    "area": "correctness",
+    "minSeverity": "Low",
+    "mustDetect": true,
+    "anchor": "setCount((current) => current + 1);"
+  },
+  {
+    "id": "FE-06",
+    "description": "Primary 'Add to cart' action is a div with onClick (no button role, not focusable, no keyboard activation)",
+    "file": "src/components/AddToCart.tsx",
+    "lineRange": [24, 26],
+    "area": "correctness",
+    "minSeverity": "Medium",
+    "mustDetect": true,
+    "anchor": "<div className=\"button button--primary\" onClick={handleAdd}>"
+  },
+  {
+    "id": "FE-07",
+    "description": "Search input has no label or aria-label (placeholder only)",
+    "file": "src/components/CatalogSearch.tsx",
+    "lineRange": [18, 24],
+    "area": "correctness",
+    "minSeverity": "Low",
+    "mustDetect": true,
+    "anchor": "placeholder=\"Search products\""
+  },
+  {
+    "id": "FE-08",
+    "description": "E2E test clicks through a structural nth-child CSS selector instead of a role/test id",
+    "file": "e2e/checkout.spec.ts",
+    "lineRange": [18, 18],
+    "area": "tests",
+    "minSeverity": "Low",
+    "mustDetect": true,
+    "anchor": "nth-child(7)"
+  },
+  {
+    "id": "FE-09",
+    "description": "Search index over the whole catalog (~4k products) is rebuilt on every render, i.e. on every keystroke",
+    "file": "src/components/CatalogSearch.tsx",
+    "lineRange": [12, 13],
+    "area": "performance",
+    "minSeverity": "Low",
+    "mustDetect": true,
+    "anchor": "const index = buildSearchIndex(products);"
+  },
+  {
+    "id": "FE-D1",
+    "description": "Decoy: merchant HTML is sanitized with DOMPurify (isomorphic, works during SSR) before dangerouslySetInnerHTML",
+    "file": "src/app/products/[id]/page.tsx",
+    "lineRange": [25, 28],
+    "area": ["security", "correctness"],
+    "mustDetect": false,
+    "mustNotFlag": true,
+    "anchor": "DOMPurify.sanitize(product.descriptionHtml)"
+  },
+  {
+    "id": "FE-D2",
+    "description": "Decoy: intentional eslint-disable for no-img-element with a reason and an ADR reference; explicit width/height and alt",
+    "file": "src/components/ProductGallery.tsx",
+    "lineRange": [12, 13],
+    "area": ["style", "readability", "performance"],
+    "mustDetect": false,
+    "mustNotFlag": true,
+    "anchor": "eslint-disable-next-line @next/next/no-img-element -- CDN serves pre-sized WebP"
+  }
+]

@@ -1,0 +1,20 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ProductCard > renders name, link and price 1`] = `
+<div>
+  <article
+    class="product-card"
+  >
+    <a
+      href="/products/1"
+    >
+      Desk lamp
+    </a>
+    <p
+      class="product-card-price"
+    >
+      $12.00
+    </p>
+  </article>
+</div>
+`;
