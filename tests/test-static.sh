@@ -3,7 +3,7 @@
 . "$(dirname "$0")/lib.sh"
 setup_sandbox
 
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || exit 1
 
 # 검사 대상: 저장소의 모든 .sh (품질 픽스처는 의도적으로 결함을 담고 있어 제외)
 list="$TEST_ROOT/sh.lst"
@@ -33,7 +33,7 @@ while IFS= read -r f; do
 	fi
 done <"$list"
 
-# shellcheck (있으면)
+# 정적 분석 도구 shellcheck가 있으면 실행
 sc=$(PATH=$ORIG_PATH command -v shellcheck || true)
 if [ -n "$sc" ]; then
 	while IFS= read -r f; do

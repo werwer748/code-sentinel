@@ -410,9 +410,9 @@ for t in $tools; do
 			ro=-
 			left=-
 			if ! tool_available "$t"; then
-				status=tool-missing
+				status='tool-missing'
 			elif ! /bin/bash "$SETUP" "$f" "$repo" </dev/null >"$dir/setup.log" 2>&1; then
-				status=setup-failed
+				status='setup-failed'
 				cp "$dir/setup.log" "$rawdir/run-$i.setup.log"
 			else
 				link_skill "$repo"
@@ -440,11 +440,11 @@ for t in $tools; do
 				bytes=$(wc -c <"$raw" | tr -d ' ')
 				lines=$(wc -l <"$raw" | tr -d ' ')
 				if [ "$trc" -eq 124 ]; then
-					status=over-time
+					status='over-time'
 				elif [ "$trc" -ne 0 ]; then
-					status=tool-failed
+					status='tool-failed'
 				elif [ "$bytes" -eq 0 ]; then
-					status=empty-output
+					status='empty-output'
 				fi
 				if [ "$status" = completed ]; then
 					src=0

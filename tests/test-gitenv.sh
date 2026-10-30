@@ -47,7 +47,7 @@ EOF
 
 R="$TEST_ROOT/userenv"
 new_repo "$R"
-cd "$R"
+cd "$R" || exit 1
 mkdir -p src
 printf 'a\n' >'src/한글.txt'
 printf '*.txt diff=tc\n' >.gitattributes
@@ -74,7 +74,7 @@ assert_eq "log.showSignature 설정에서 commit 범위 성공" 0 "$RC"
 mk_marker_cmd cleanf
 R2="$TEST_ROOT/filter"
 new_repo "$R2"
-cd "$R2"
+cd "$R2" || exit 1
 printf '*.secret filter=crypt\n' >.gitattributes
 printf 'aaaa\n' >x.secret
 printf 'n\n' >normal.txt
@@ -96,7 +96,7 @@ if [ -e "$MARK/cleanf" ]; then fail "full: clean 필터 미실행" "실행됨"; 
 # ------------------------------------------------------------ partial clone
 SRC="$TEST_ROOT/pc-src"
 new_repo "$SRC"
-cd "$SRC"
+cd "$SRC" || exit 1
 git config uploadpack.allowFilter true
 git config uploadpack.allowAnySHA1InWant true
 printf 'v1\n' >data.txt
@@ -107,7 +107,7 @@ printf 'v3\n' >data.txt
 gcommit c3
 PC="$TEST_ROOT/pc"
 git clone -q --filter=blob:none "file://$SRC" "$PC" 2>/dev/null
-cd "$PC"
+cd "$PC" || exit 1
 before=$(find .git/objects -type f | wc -l)
 collect --scope commit --ref HEAD~1
 after=$(find .git/objects -type f | wc -l)
@@ -119,7 +119,7 @@ assert_eq "partial clone: 객체가 있는 범위는 성공" 0 "$RC"
 # ------------------------------------------------------------ 읽기 전용 .git
 R3="$TEST_ROOT/ro"
 new_repo "$R3"
-cd "$R3"
+cd "$R3" || exit 1
 printf 'a\n' >a.txt
 gcommit init
 git checkout -q -b feature
@@ -138,7 +138,7 @@ chmod -R u+w .git
 
 # ------------------------------------------------------------ linked worktree
 git worktree add -q "$TEST_ROOT/wt" -b wt-branch main 2>/dev/null
-cd "$TEST_ROOT/wt"
+cd "$TEST_ROOT/wt" || exit 1
 printf 'w\n' >w.txt
 git add w.txt
 collect --scope staged

@@ -50,7 +50,7 @@ verify_numbers() { # <numbered 파일> <변경 후 트리> <변경 전 트리>
 # ------------------------------------------------------------ 기본 저장소
 R="$TEST_ROOT/repo"
 new_repo "$R"
-cd "$R"
+cd "$R" || exit 1
 i=1
 : >a.txt
 while [ "$i" -le 20 ]; do
@@ -144,7 +144,7 @@ assert_eq "full: 번호 diff 파일 없음" 0 "$(find "$(mf_get "$M" context_dir
 # ------------------------------------------------------------ 변경 없음
 R2="$TEST_ROOT/empty"
 new_repo "$R2"
-cd "$R2"
+cd "$R2" || exit 1
 printf 'a\n' >a.txt
 gcommit init
 collect --scope staged
@@ -152,7 +152,7 @@ assert_eq "변경 없음: 성공" 0 "$RC"
 assert_eq "변경 없음: 안내 줄만" 1 "$(($(wc -l <"$(mf_get "$M" numbered_diff_file)")))"
 
 # ------------------------------------------------------------ PR gh-diff 모드(가짜 gh)
-cd "$R"
+cd "$R" || exit 1
 FAKEBIN="$TEST_ROOT/fakebin"
 mkdir -p "$FAKEBIN"
 cat >"$FAKEBIN/gh" <<'GH'
@@ -181,7 +181,7 @@ for fx in backend-api frontend-web infra clean-change; do
 		fail "픽스처 $fx 준비" "setup.sh 실패"
 		continue
 	fi
-	cd "$FR"
+	cd "$FR" || exit 1
 	collect --scope changes --base main
 	res=$(verify_numbers "$(mf_get "$M" numbered_diff_file)" "$FR" "$FIX/$fx/base")
 	if [ "${res%% *}" -gt 0 ] && [ "${res#* }" -eq 0 ]; then

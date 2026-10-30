@@ -14,8 +14,11 @@ set -u
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 SKILL_DIR="$REPO_ROOT/skills/code-sentinel"
 SCRIPTS_DIR="$SKILL_DIR/scripts"
+# shellcheck disable=SC2034 # 이 파일을 source하는 테스트들이 씀
 COLLECT="$SCRIPTS_DIR/collect-context.sh"
+# shellcheck disable=SC2034
 CLEANUP="$SCRIPTS_DIR/cleanup-context.sh"
+# shellcheck disable=SC2034
 VERIFY="$SCRIPTS_DIR/run-verification.sh"
 
 T_NAME=$(basename "$0" .sh)
@@ -30,6 +33,7 @@ skip() { T_SKIP=$((T_SKIP + 1)); printf 'SKIP  %s%s\n' "$1" "${2:+ -- $2}"; }
 # 격리 환경을 만든다. TEST_ROOT 아래에 HOME, TMPDIR 등을 두고 종료 시 지운다.
 # 원래 PATH 는 ORIG_PATH 로 보존한다(shellcheck 등 예외용).
 setup_sandbox() {
+	# shellcheck disable=SC2034 # test-static.sh 등이 씀
 	ORIG_PATH=$PATH
 	ORIG_TMPDIR=${TMPDIR:-/tmp}
 	TEST_ROOT=$(mktemp -d "${ORIG_TMPDIR%/}/cs-test.XXXXXX")

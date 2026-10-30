@@ -379,7 +379,7 @@ RE_FIX="$OB(--fix|--write|--update|-update|--update-snapshots?|--updateSnapshots
 RE_MIGRATE="$WB(migrate|migration:run|migrations:run|db[[:space:]:]+push|db:seed|db:reset|db:drop|db:create|db:setup|db:schema:load|schema:sync|schema:drop|alembic[[:space:]]+upgrade|alembic[[:space:]]+downgrade|liquibase[[:space:]]+update|drizzle-kit[[:space:]]+push)$WE"
 RE_CODEGEN="$WB(generate|codegen)$WE"
 RE_DOCKER="$WB(docker|docker-compose|podman|podman-compose)$WE"
-RE_CURL1="$WB(curl|wget)$WE[^|]*[|][[:space:]]*(sudo[[:space:]]+)?(env[[:space:]]+)?([^[:space:]|]*/)?(bash|sh|zsh|dash|ksh|fish|python|python3|node|perl|ruby)$WE"
+RE_CURL1="$WB(curl|wget)${WE}[^|]*[|][[:space:]]*(sudo[[:space:]]+)?(env[[:space:]]+)?([^[:space:]|]*/)?(bash|sh|zsh|dash|ksh|fish|python|python3|node|perl|ruby)$WE"
 RE_CURL2='(^|[^A-Za-z0-9_])(bash|sh|zsh|dash|ksh|eval|source)([^A-Za-z0-9_]|$)[^;&|]*([$][(]|<[(]|`)[[:space:]]*(curl|wget)([^A-Za-z0-9_]|$)'
 RE_RM='(^|[^A-Za-z0-9_./-])rm[[:space:]]+(-[A-Za-z]+[[:space:]]+)*(-[A-Za-z]*[rR]|--recursive)'
 RE_RIMRAF="$WB(rimraf|del-cli)$WE"
@@ -419,11 +419,11 @@ find_local_bin() {
 
 # 셸 텍스트를 명령 단위(세그먼트)로 나눠 명령별 규칙을 검사한다.
 scan_segments() {
-	local label=$1 text=$2 seg w cmd sub rest bin has_run i
+	local label=$1 text=$2 seg w cmd sub rest bin i
 	local -a words
 	while IFS= read -r seg; do
-		# shellcheck disable=SC2206
 		set -f
+		# shellcheck disable=SC2206 # 의도한 단어 분리(glob은 set -f로 끔)
 		words=($seg)
 		set +f
 		[ ${#words[@]} -gt 0 ] || continue
@@ -1014,7 +1014,7 @@ EOF_MK
 	# 레시피가 npm·yarn·pnpm 스크립트를 부르면 package.json 도 검사
 	if find_pkgroot; then
 		case "$all_text" in
-		*npm* | *yarn* | *pnpm* | *bun* | *run-s* | *run-p*) analyze_pkg "$all_text" ;;
+		*npm* | *yarn* | *bun* | *run-s* | *run-p*) analyze_pkg "$all_text" ;;
 		esac
 	fi
 }
@@ -1052,7 +1052,7 @@ classify_pm() {
 	if [ "$n" -lt 1 ]; then deny_cmd "$pm (하위 명령 없음)"; return; fi
 	case "${av[0]}" in
 	test | t | tst)
-		script=test
+		script='test'
 		i=1
 		;;
 	run | run-script | rum | urn)
@@ -1082,7 +1082,7 @@ classify_pm() {
 	done
 	if [ "$pm" != npm ]; then
 		case " $rest_args " in
-		*" -r "* | *" --recursive "* | *" --filter"* | *" -F "* | *" --workspace"* | *" -w "* | *" --workspace-root "*)
+		*" -r "* | *" --recursive "* | *" --filter"* | *" -F "* | *" --workspace"* | *" -w "*)
 			add_reason "워크스페이스 전체 실행 옵션은 지원하지 않음: $(san "$rest_args")"
 			;;
 		esac
@@ -1331,7 +1331,7 @@ classify() {
 		classify_pm "$@"
 		;;
 	make | gmake)
-		KIND=make
+		KIND='make'
 		classify_make "$@"
 		;;
 	go)
@@ -1387,12 +1387,12 @@ classify() {
 
 # porcelain v1 -z → "경로<TAB>XY" (경로는 C 스타일 따옴표)
 parse_status() {
-	local rec xy p orig
+	local rec xy p
 	while IFS= read -r -d '' rec; do
 		xy=${rec:0:2}
 		p=${rec:3}
 		case "$xy" in
-		R* | C* | ?R | ?C) IFS= read -r -d '' orig || true ;;
+		R* | C* | ?R | ?C) IFS= read -r -d '' _ || true ;; # 이름 변경·복사의 원래 경로는 버림
 		esac
 		cq "$p"
 		printf '%s\t%s\n' "$CQ" "$xy"

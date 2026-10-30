@@ -10,6 +10,7 @@
   - 영역별 심각도 예시를 각 영역 문서로 옮기고, 두 곳에 있던 옵션 오류 표를 `report/errors.md` 하나로 합침
   - `run-verification.sh` 호출 예시를 `/bin/bash "<SKILL_DIR>/scripts/..."` 형식으로 통일하고, 끊어진 절 번호 참조를 고침
 - `test-static.sh`: 문서 줄 수, SKILL.md 표와 실제 파일의 일치, 문서 간 상대 참조 검사 추가
+- shellcheck 경고 정리(동작 변화 없음): 쓰지 않는 변수와 앞 패턴에 가려진 `case` 패턴 제거, 하이픈이 든 문자열 대입에 따옴표, 테스트의 `cd` 실패 시 중단(`|| exit 1`), shellcheck 지시어로 잘못 읽히던 주석 수정
 - 품질 픽스처 기대값: FE-01을 `correctness·architecture`로(Next.js가 비공개 env를 클라이언트 번들에서 비워 토큰은 새지 않고 회원가 표시가 깨짐), IN-02 최소 심각도를 Low로(배포 경로에서 쓰이지 않는 Dockerfile)
 
 ## [1.0.0] - 2026-10-29

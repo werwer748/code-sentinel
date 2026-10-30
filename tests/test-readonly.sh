@@ -39,7 +39,7 @@ check_invariant() { # <설명> <collect 인자...>
 # ------------------------------------------------------------ 기본 저장소
 R="$TEST_ROOT/repo"
 new_repo "$R"
-cd "$R"
+cd "$R" || exit 1
 printf 'a\n' >a.txt
 printf 'b\n' >b.txt
 gcommit init
@@ -108,7 +108,7 @@ git checkout -q -- a.txt
 
 # ------------------------------------------------------------ linked worktree, 필터·사용자 설정 저장소
 git worktree add -q "$TEST_ROOT/wt" -b wt-branch main 2>/dev/null
-cd "$TEST_ROOT/wt"
+cd "$TEST_ROOT/wt" || exit 1
 printf 'w\n' >w.txt
 git add w.txt
 printf 'w2\n' >>w.txt
@@ -117,7 +117,7 @@ check_invariant "linked worktree changes" --scope changes --base main
 
 R2="$TEST_ROOT/filter"
 new_repo "$R2"
-cd "$R2"
+cd "$R2" || exit 1
 printf '*.secret filter=crypt\n' >.gitattributes
 printf 'aaaa\n' >x.secret
 gcommit init

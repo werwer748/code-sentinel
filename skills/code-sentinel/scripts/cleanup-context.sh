@@ -48,7 +48,6 @@ phys_dir() {
 }
 
 # 허용되는 부모(임시 디렉터리) 목록: ${TMPDIR:-/tmp}, /tmp 를 물리 경로로.
-TMP_ROOTS=""
 TMP_ROOT_1=$(phys_dir "${TMPDIR:-/tmp}")
 TMP_ROOT_2=$(phys_dir /tmp)
 
@@ -224,7 +223,7 @@ cleanup_one() {
 }
 
 cleanup_stale() {
-	local minutes=$1 now cutoff root seen="" d name failed=0 removed=0 kept=0
+	local minutes=$1 now cutoff root seen="" d failed=0 removed=0 kept=0
 	now=$(date +%s)
 	cutoff=$((now - minutes * 60))
 	for root in "$TMP_ROOT_1" "$TMP_ROOT_2"; do
@@ -233,7 +232,6 @@ cleanup_stale() {
 		seen=$root
 		for d in "$root"/"$PREFIX"*; do
 			[ -e "$d" ] || [ -L "$d" ] || continue
-			name=${d##*/}
 			if ! validate "$d"; then
 				err "건너뜀: $d ($REASON)"
 				kept=$((kept + 1))

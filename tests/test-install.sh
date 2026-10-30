@@ -511,6 +511,7 @@ mkdir -p "$HOME/.codex/skills/code-sentinel"
 printf 'legacy\n' >"$HOME/.codex/skills/code-sentinel/SKILL.md"
 before=$(home_tree)
 rx "레거시 중복은 경고(실패 아님)" 0 "$DOC"
+# shellcheck disable=SC2088 # 테스트 이름의 ~는 표시용 문자열
 assert_contains "~/.codex/skills 중복 WARN" "$LAST_OUT" "WARN  레거시 경로에 같은 이름의 스킬이 있습니다: $HOME/.codex/skills/code-sentinel (디렉터리)"
 assert_eq "doctor 가 레거시 경로를 건드리지 않음" "$before" "$(home_tree)"
 export CODEX_HOME="$HOME/codex home"
@@ -518,6 +519,7 @@ mkdir -p "$CODEX_HOME/skills"
 ln -s "$OTHER" "$CODEX_HOME/skills/code-sentinel"
 rx "CODEX_HOME 레거시 중복도 경고" 0 "$DOC"
 assert_contains "\$CODEX_HOME/skills 중복 WARN" "$LAST_OUT" "WARN  레거시 경로에 같은 이름의 스킬이 있습니다: $CODEX_HOME/skills/code-sentinel (링크 -> $OTHER)"
+# shellcheck disable=SC2088 # 테스트 이름의 ~는 표시용 문자열
 assert_contains "~/.codex/skills 도 함께 점검" "$LAST_OUT" "$HOME/.codex/skills/code-sentinel (디렉터리)"
 rx "레거시 중복이 있어도 install 은 ~/.agents 에만 설치" 0 "$INS" --codex
 assert_eq "레거시 경로 유지" "legacy" "$(cat "$HOME/.codex/skills/code-sentinel/SKILL.md")"

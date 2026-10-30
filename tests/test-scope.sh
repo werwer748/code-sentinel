@@ -31,7 +31,7 @@ GH
 # ------------------------------------------------------------ 기본 저장소
 R="$TEST_ROOT/repo"
 new_repo "$R"
-cd "$R"
+cd "$R" || exit 1
 printf 'one\ntwo\nthree\n' >keep.txt
 printf 'del\n' >gone.txt
 printf 'line1\nline2\nline3\nline4\nline5\n' >old-name.txt
@@ -103,7 +103,7 @@ assert_eq "full: diff_file none" none "$(mf_get "$M" diff_file)"
 # ------------------------------------------------------------ 특수 경로
 R2="$TEST_ROOT/paths"
 new_repo "$R2"
-cd "$R2"
+cd "$R2" || exit 1
 printf 'a\n' >a.txt
 gcommit init
 printf 'x\n' >'공백 있는 한글.ts'
@@ -122,7 +122,7 @@ assert_contains "경로: 역슬래시 인용" "$f" 'A	"back\\slash.ts"'
 # ------------------------------------------------------------ merge-base / 기준 브랜치
 R3="$TEST_ROOT/base"
 new_repo "$R3"
-cd "$R3"
+cd "$R3" || exit 1
 printf 'a\n' >a.txt
 gcommit init
 git checkout -q -b feature
@@ -181,7 +181,7 @@ rm -rf sub
 # shallow clone
 SH="$TEST_ROOT/shallow"
 git clone -q --depth 1 --no-single-branch "file://$R3" "$SH" 2>/dev/null
-cd "$SH"
+cd "$SH" || exit 1
 git checkout -q feature 2>/dev/null || git checkout -q -b feature origin/feature
 collect --scope changes --base origin/main
 assert_eq "shallow clone → 4" 4 "$RC"
@@ -190,7 +190,7 @@ assert_contains "shallow 안내" "$(cat "$TEST_ROOT/err.txt")" "unshallow"
 # ------------------------------------------------------------ 최초 커밋, 빈 저장소, merge commit
 R4="$TEST_ROOT/root"
 new_repo "$R4"
-cd "$R4"
+cd "$R4" || exit 1
 printf 'first\n' >first.txt
 git add first.txt
 collect --scope staged
@@ -218,7 +218,7 @@ assert_eq "커밋 범위 지정 → 2" 2 "$RC"
 # ------------------------------------------------------------ 변경 없음, 제외 규칙, 필터, 대형 변경
 R5="$TEST_ROOT/rules"
 new_repo "$R5"
-cd "$R5"
+cd "$R5" || exit 1
 printf 'a\n' >a.ts
 printf '{"dependencies":{}}\n' >package.json
 gcommit init
@@ -302,7 +302,7 @@ git config --unset core.autocrlf
 # ------------------------------------------------------------ 심볼릭 링크·submodule 항목
 R6="$TEST_ROOT/links"
 new_repo "$R6"
-cd "$R6"
+cd "$R6" || exit 1
 printf 'SECRET-OUTSIDE-CONTENT\n' >"$TEST_ROOT/outside.txt"
 printf 'a\n' >a.txt
 gcommit init
@@ -319,7 +319,7 @@ collect --scope full
 assert_contains "full: 심볼릭 링크 표시" "$(files)" "link	symlink"
 
 # ------------------------------------------------------------ 옵션 검증과 환경 오류
-cd "$R"
+cd "$R" || exit 1
 collect --scope nope
 assert_eq "알 수 없는 범위 → 2" 2 "$RC"
 collect --scope staged --wat
@@ -342,7 +342,7 @@ assert_eq "잘못된 --base → 5" 5 "$RC"
 # ------------------------------------------------------------ 커밋 메시지 상한
 R7="$TEST_ROOT/commits"
 new_repo "$R7"
-cd "$R7"
+cd "$R7" || exit 1
 gcommit init
 git checkout -q -b feature
 i=0
@@ -357,7 +357,7 @@ assert_eq "커밋 메시지는 50개만" 50 "$(grep -c '^commit [0-9a-f]\{40\}$'
 assert_contains "커밋 상한 경고" "$(mf_section "$M" WARNINGS)" "최근 50개"
 
 # ------------------------------------------------------------ PR (가짜 gh)
-cd "$R3"
+cd "$R3" || exit 1
 git checkout -q feature
 collect --scope pr --pr 1
 assert_eq "gh 없음 → 6" 6 "$RC"

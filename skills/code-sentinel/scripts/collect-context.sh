@@ -937,7 +937,7 @@ if [ "$scope" = full ]; then
 		case ",${F_FLAGS[$i]}," in *,submodule,* | *,symlink,* | *,lfs,* | *,filtered,* | *,binary,*) continue ;; esac
 		sz=$(stat -f %z "$p")
 		if [ $((total_bytes + sz)) -gt "$MAX_TOTAL_BYTES" ]; then
-			F_SKIP[$i]=total-size
+			F_SKIP[$i]='total-size'
 			continue
 		fi
 		total_bytes=$((total_bytes + sz))
