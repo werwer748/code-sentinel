@@ -11,7 +11,7 @@ Git 변경사항을 8개 영역(`security`, `correctness`, `ops`, `architecture`
 
 - 입력은 이 스킬을 호출한 사용자 메시지에서 호출 표식(`/code-sentinel`, `$code-sentinel`)을 뺀 나머지입니다. Claude Code가 이 본문 끝에 `ARGUMENTS:` 줄을 붙였다면 그 내용이 입력입니다. 도구가 인자를 따로 넘겨준다고 가정하지 않습니다.
 - 옵션: 범위 `--changes`(기본)·`--staged`·`--commit [ref]`·`--pr <n>`·`--full` 중 하나, `--base <ref>`, `--files <pathspec>`, `--exclude <pathspec>`, `--depth quick|standard|deep`, `--strictness balanced|strict`, `--min-severity critical|high|medium|low`, `--focus <slug>[,<slug>]`, `--max-findings <n>|all`, `--run-tests`.
-- 입력이 비어 있으면 모두 기본값입니다: `--changes --base <매니페스트 base_ref> --depth standard --strictness balanced --min-severity low --focus all --max-findings 20`.
+- 입력이 비어 있으면 모두 기본값입니다: `--changes --base <매니페스트 base_ref> --depth standard --strictness balanced --min-severity low --focus all --max-findings 20`. 플래그와 그 값을 뺀 나머지가 다음 요청 문구 하나와 같으면(공백·문장부호·영어 대소문자만 무시) 그 나머지는 없는 것으로 봅니다: 리뷰, 리뷰해줘, 리뷰 좀 해줘, 리뷰해 주세요, 리뷰 부탁해, 리뷰 부탁해요, 리뷰 부탁합니다, 리뷰 부탁드립니다, 코드 리뷰, 코드 리뷰해줘, 코드 검토, 코드 검토해줘, 검토해줘, 검토 부탁해, 봐줘, 코드 좀 봐줘, 변경사항 리뷰해줘, 변경사항 검토, 변경사항 검토해줘, 머지 전 점검, review, please review, code review, review this, review this diff, review my changes, pre-merge check. 목록에 없으면 평소대로 해석합니다.
 - 입력이 있으면 5절 표의 옵션 문서를 읽고 그 규칙과 매핑표대로만 해석합니다. 모호해도 되묻지 않고, 해석 결과를 보고서 첫 내용 줄 `해석된 옵션:`에 적고 진행합니다. 같은 입력이면 두 도구에서 같은 줄이 나와야 하므로 규칙 밖의 추측을 하지 않습니다.
 
 ## 2. 스킬 디렉터리
@@ -81,8 +81,8 @@ Git 변경사항을 8개 영역(`security`, `correctness`, `ops`, `architecture`
 
 | 언제 | 읽을 문서 |
 |---|---|
-| 입력이 비어 있지 않음 | `options/flags.md` |
-| 입력에 플래그와 그 값이 아닌 텍스트가 있음 | 위에 더해 `options/natural-language.md`, `options/nl-scope.md`, `options/nl-review.md` |
+| 입력이 비어 있지 않음 (1절의 요청 문구 하나뿐이면 제외) | `options/flags.md` |
+| 입력에 플래그와 그 값이 아닌 텍스트가 있음 (1절의 요청 문구 하나뿐이면 제외) | 위에 더해 `options/natural-language.md`, `options/nl-scope.md`, `options/nl-review.md` |
 | 옵션 오류, 스크립트 없음, 수집 종료 코드가 0이 아님 | `report/errors.md` |
 | `target_files 0` (리뷰 없이 출력) | `report/summary.md`, `report/empty.md` |
 | 리뷰할 때 항상 | `review/principles.md`, `review/severity.md`, `report/summary.md`, `report/findings.md`, `report/status.md` |

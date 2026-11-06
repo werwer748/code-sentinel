@@ -18,11 +18,14 @@ export LC_ALL=C
 
 readonly MAX_FILE_BYTES=1048576     # 파일당 1 MiB
 readonly MAX_TOTAL_BYTES=10485760   # --full 전체 10 MiB
+readonly LONG_LINE_MIN_BYTES=65536  # 이 크기를 넘는 파일만 줄 길이를 본다
+readonly LONG_LINE_AVG_BYTES=500    # 줄 평균이 이 바이트를 넘으면 long-line (압축·데이터 파일)
 readonly MAX_COMMITS=50
 readonly SPLIT_FILES=60
 readonly SPLIT_LINES=3000
 readonly TRUNC_FILES=300
-readonly TRUNC_LINES=20000
+readonly TRUNC_LINES=5000
+readonly TRUNC_BYTES=262144         # 모델이 읽을 diff(--full 은 파일 내용) 256 KiB
 readonly MARKER=.code-sentinel-context
 
 # ---------------------------------------------------------------- 공통
@@ -348,12 +351,22 @@ path_rule_reason() {
 	esac
 }
 
-# --include 가 기본 제외를 덮어쓰는지: include 패턴이 그 경로와 같거나, 패턴 자체가 기본 제외 대상일 때
-include_overrides() {
+# --include 로 그 경로를 정확히 지정했는지 (long-line 생략을 덮어씀)
+explicit_include() {
 	local path=$1 p
 	[ ${#includes[@]} -gt 0 ] || return 1
 	for p in "${includes[@]}"; do
 		if [ "$path" = "${p%/}" ]; then return 0; fi
+	done
+	return 1
+}
+
+# --include 가 기본 제외를 덮어쓰는지: include 패턴이 그 경로와 같거나, 패턴 자체가 기본 제외 대상일 때
+include_overrides() {
+	local path=$1 p
+	explicit_include "$path" && return 0
+	[ ${#includes[@]} -gt 0 ] || return 1
+	for p in "${includes[@]}"; do
 		if [ -n "$(path_rule_reason "${p%/}/x")" ] || [ -n "$(path_rule_reason "${p%/}")" ]; then
 			ps_match "$path" "$p" && return 0
 		fi
@@ -374,7 +387,8 @@ is_binary_file() { # 작업 트리 파일 앞 8000바이트에 NUL 이 있으면
 
 # ---------------------------------------------------------------- 파일 레코드
 # F_ST 상태, F_PATH 경로, F_OLD 이전 경로, F_OM/F_NM 모드, F_OSHA/F_NSHA blob,
-# F_ADD/F_DEL 줄 수(binary 는 -), F_FLAGS 표시, F_SKIP 생략 사유, F_RULE 규칙 제외 사유
+# F_ADD/F_DEL 줄 수(binary 는 -), F_FLAGS 표시, F_SKIP 생략 사유, F_RULE 규칙 제외 사유,
+# F_DBYTES 패치에서 센 hunk 본문 바이트 수(gh-diff 모드만, 그 밖은 빈 값)
 
 F_ST=()
 F_PATH=()
@@ -388,6 +402,7 @@ F_DEL=()
 F_FLAGS=()
 F_SKIP=()
 F_RULE=()
+F_DBYTES=()
 
 add_record() { # st path old om nm osha nsha add del flags
 	F_ST+=("$1")
@@ -402,6 +417,7 @@ add_record() { # st path old om nm osha nsha add del flags
 	F_FLAGS+=("${10}")
 	F_SKIP+=("")
 	F_RULE+=("")
+	F_DBYTES+=("")
 }
 
 # git diff --raw --numstat -z 출력 파일을 레코드로 읽는다.
@@ -552,9 +568,43 @@ snapshot_size() { # idx → 바이트 수
 	esac
 }
 
+snapshot_lines() { # idx → 스냅샷 파일의 줄 수
+	local i=$1 path=${F_PATH[$1]}
+	if [ "$SNAPSHOT_KIND" = worktree ]; then
+		wc -l <"$path"
+		return
+	fi
+	case "${F_NSHA[$i]}" in
+	0000000* | "") printf 0 ;;
+	*) { G cat-file blob "${F_NSHA[$i]}" 2>/dev/null || true; } | wc -l ;;
+	esac
+}
+
+# 줄이 매우 긴 파일(압축·데이터 파일)인지: diff에 들어갈 분량이 LONG_LINE_MIN_BYTES 를 넘고 줄 평균이
+# LONG_LINE_AVG_BYTES 를 넘음. 줄 수가 적어 대형 변경 기준에 걸리지 않는데 diff 분량은 큰 파일을 거른다.
+# 추가·삭제 파일은 diff 에 그쪽 내용 전체가 들어가므로 numstat 줄 수로, 그 밖은 스냅샷 파일 전체로 본다.
+is_long_line() { # idx size
+	local i=$1 size=$2 lines
+	if [ "$DIFF_MODE" = gh-diff ]; then
+		size=${F_DBYTES[$i]:-0}
+		lines=$((${F_ADD[$i]} + ${F_DEL[$i]}))
+	fi
+	[ "$size" -gt "$LONG_LINE_MIN_BYTES" ] || return 1
+	if [ "$DIFF_MODE" != gh-diff ]; then
+		case "${F_ST[$i]}" in
+		A) lines=${F_ADD[$i]} ;;
+		D) lines=${F_DEL[$i]} ;;
+		*) lines=$(snapshot_lines "$i") ;;
+		esac
+	fi
+	lines=$((lines))
+	[ "$lines" -ge 1 ] || lines=1
+	[ $((size / lines)) -gt "$LONG_LINE_AVG_BYTES" ]
+}
+
 # 레코드별 표시·규칙 제외·크기 생략을 정한다.
 classify() {
-	local n=${#F_PATH[@]} i path reason fl
+	local n=${#F_PATH[@]} i path reason fl sz
 	for ((i = 0; i < n; i++)); do
 		path=${F_PATH[$i]}
 		fl=${F_FLAGS[$i]}
@@ -596,8 +646,11 @@ classify() {
 		case ",$fl," in
 		*,binary,* | *,submodule,* | *,lfs,*) continue ;;
 		esac
-		if [ "$(snapshot_size "$i")" -gt "$MAX_FILE_BYTES" ]; then
+		sz=$(snapshot_size "$i")
+		if [ "$sz" -gt "$MAX_FILE_BYTES" ]; then
 			F_SKIP[$i]=size
+		elif ! explicit_include "$path" && is_long_line "$i" "$sz"; then
+			F_SKIP[$i]=long-line
 		fi
 	done
 }
@@ -869,7 +922,7 @@ esac
 # ---------------------------------------------------------------- gh-diff 모드 파일 목록
 
 if [ "$DIFF_MODE" = gh-diff ]; then
-	# 패치 헤더를 파싱: 상태<TAB>경로<TAB>이전경로<TAB>추가<TAB>삭제<TAB>binary
+	# 패치 헤더를 파싱: 상태<TAB>경로<TAB>이전경로<TAB>추가<TAB>삭제<TAB>binary<TAB>hunk 본문 바이트
 	parsed="$CTX/gh.files"
 	awk '
 	function unq(s,   out, i, c, n) {
@@ -889,10 +942,10 @@ if [ "$DIFF_MODE" = gh-diff ]; then
 	function flush() {
 		if (!have) return
 		if (path == "") path = hdr
-		printf "%s\t%s\to:%s\t%s\t%s\t%s\n", st, path, old, (bin ? "-" : add), (bin ? "-" : del), bin
+		printf "%s\t%s\to:%s\t%s\t%s\t%s\t%d\n", st, path, old, (bin ? "-" : add), (bin ? "-" : del), bin, bytes
 	}
 	/^diff --git / {
-		flush(); have = 1; st = "M"; path = ""; old = ""; add = 0; del = 0; bin = 0; inh = 0
+		flush(); have = 1; st = "M"; path = ""; old = ""; add = 0; del = 0; bin = 0; inh = 0; bytes = 0
 		rest = substr($0, 12)
 		if (substr(rest, 1, 1) == "\"") { q = index(substr(rest, 2), "\""); hdr = substr(unq(substr(rest, 1, q + 1)), 3) }
 		else hdr = substr(rest, 3, (length(rest) - 3) / 2 - 1)
@@ -900,6 +953,7 @@ if [ "$DIFF_MODE" = gh-diff ]; then
 	}
 	!have { next }
 	/^@@ / { inh = 1; next }
+	inh { bytes += length($0) + 1 }
 	inh && /^\+/ { add++; next }
 	inh && /^-/ { del++; next }
 	inh { next }
@@ -913,12 +967,13 @@ if [ "$DIFF_MODE" = gh-diff ]; then
 	END { flush() }
 	' "$rawpatch" >"$parsed"
 	# 이전 경로 열은 비어 있을 수 있어 "o:" 접두어를 붙여 둔다(탭 IFS 는 빈 필드를 합치므로)
-	while IFS=$'\t' read -r st p old add del bin; do
+	while IFS=$'\t' read -r st p old add del bin dbytes; do
 		old=${old#o:}
 		user_selected "$p" || continue
 		flags=""
 		[ "$bin" = 1 ] && flags=binary
 		add_record "$st" "$p" "$old" 100644 100644 0000000 0000000 "$add" "$del" "$flags"
+		F_DBYTES[${#F_PATH[@]} - 1]=$dbytes
 	done <"$parsed"
 fi
 
@@ -1087,8 +1142,14 @@ for ((i = 0; i < n; i++)); do
 	[ "$dl" = "-" ] && dl=0
 	lines=$((lines + a + dl))
 done
+# 모델이 읽을 분량: diff 범위는 생략·규칙 제외 파일을 뺀 diff 크기, --full 은 수집 대상 파일 내용 합계
+if [ "$scope" = full ]; then
+	bytes=$total_bytes
+else
+	bytes=$(($(wc -c <"$DIFF_FILE")))
+fi
 split=none
-if [ "$target" -gt "$TRUNC_FILES" ] || [ "$lines" -gt "$TRUNC_LINES" ]; then
+if [ "$target" -gt "$TRUNC_FILES" ] || [ "$lines" -gt "$TRUNC_LINES" ] || [ "$bytes" -gt "$TRUNC_BYTES" ]; then
 	split=truncated
 elif [ "$target" -gt "$SPLIT_FILES" ] || [ "$lines" -gt "$SPLIT_LINES" ]; then
 	split=recommended
@@ -1119,6 +1180,7 @@ MF="$CTX/manifest.txt"
 	for kv in ${M_EXTRA[@]+"${M_EXTRA[@]}"}; do printf '%s\n' "$kv"; done
 	printf 'target_files\t%d\n' "$target"
 	printf 'target_lines\t%d\n' "$lines"
+	printf 'target_bytes\t%d\n' "$bytes"
 	printf 'rule_excluded\t%d\n' "$nrule"
 	printf 'skipped\t%d\n' "$nskip"
 	printf 'split\t%s\n' "$split"

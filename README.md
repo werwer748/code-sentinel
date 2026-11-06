@@ -75,7 +75,8 @@ code-sentinel은 스스로 읽기 전용 규칙을 지키지만, 도구 수준�
   - 실행 전후로 저장소 상태를 비교하지만, 저장소 밖의 부수 효과(로컬 DB, 전역 캐시, 네트워크 요청)는 감지하지 못합니다.
 - **`--pr`:** `gh`가 설치·인증되어 있어야 합니다. code-sentinel은 `git fetch`를 하지 않으므로, PR head 커밋이 로컬에 없으면 diff만 보고 리뷰합니다(diff-only).
 - **shallow·partial clone:** shallow clone은 merge-base를 구할 수 없으면 멈춥니다. partial clone은 필요한 객체가 없으면 멈추고, git 2.46 미만에서는 객체 지연 다운로드를 막을 수 없어 `--pr` 외 범위를 지원하지 않습니다.
-- **크기 상한:** 파일당 1 MiB, `--full` 전체 10 MiB를 넘는 내용은 수집하지 않고 `partial`로 표시합니다.
+- **크기 상한:** 파일당 1 MiB, `--full` 전체 10 MiB를 넘는 내용은 수집하지 않고 `partial`로 표시합니다. 64 KiB가 넘으면서 줄 평균이 500바이트를 넘는 파일(한 줄 JSON, 압축된 번들 등)도 수집하지 않습니다. 꼭 봐야 하면 `--files <경로>`로 정확히 지정하세요.
+- **대형 변경:** 5,000줄 또는 diff 256 KiB를 넘으면 위험 경로부터 그 분량까지만 읽고 `partial`로 표시합니다. 나머지는 보고서 끝의 `--files` 호출 예시로 이어서 검토합니다.
 - **기본 제외:** lockfile, 빌드 산출물, minified, 스냅샷, 생성 코드는 리뷰하지 않습니다(`--files`로 명시하면 포함). lockfile은 manifest와의 일치 여부만 확인합니다.
 - **임시 디렉터리:** 리뷰 도중 AI 도구가 비정상 종료되면(사용량 한도, 강제 종료 등) 정리 단계가 실행되지 않아 `${TMPDIR}/code-sentinel.*`가 남을 수 있습니다. `skills/code-sentinel/scripts/cleanup-context.sh --stale`로 하루(1440분)가 지난 것을 지울 수 있습니다.
 - **리뷰 품질:** 실제 도구 검증(2라운드)에서 8개 조합 중 4개만 합격했습니다. 불합격 원인은 모델의 심각도·영역 판단이 기대값과 다른 것(서버 전용 모듈 import를 `correctness`로 분류, `latest`·root Dockerfile을 Low로 판단)과 Low 항목 누락입니다. 자세한 내용은 [tests/REVIEW-QUALITY.md](tests/REVIEW-QUALITY.md)에 있습니다.

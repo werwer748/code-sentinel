@@ -23,6 +23,7 @@ stdout에 줄 기반 텍스트 매니페스트를 냅니다.
     uncommitted     included
     target_files    12
     target_lines    340
+    target_bytes    14820
     rule_excluded   3
     skipped         0
     split           none|recommended|truncated
@@ -54,6 +55,7 @@ stdout에 줄 기반 텍스트 매니페스트를 냅니다.
 | `collected_at` | 수집 시각(UTC) |
 | `status_summary` | 수집 시점의 작업 트리 상태 요약 `staged=N unstaged=N untracked=N` (스냅샷이 `worktree`·`index`일 때만) |
 | `target_files`, `target_lines` | 규칙 제외를 뺀 대상 파일 수와 줄 수 |
+| `target_bytes` | 모델이 읽을 분량(바이트). 검토 생략·규칙 제외를 뺀 diff 크기, `--full`은 수집 대상 파일 내용 합계 |
 | `rule_excluded`, `skipped` | 규칙 제외 수, 검토 생략 수 |
 | `split` | `none`, `recommended`, `truncated` (`large-changes.md`) |
 | `diff_file` | 리뷰할 diff가 든 파일(원본 patch). `--full`은 `none`이며, 이때는 `[FILES]`의 파일을 작업 트리에서 직접 읽음 |
@@ -83,6 +85,6 @@ stdout에 줄 기반 텍스트 매니페스트를 냅니다.
 
 **`[RULE_EXCLUDED]`**: `<경로>` 탭 `<사유>`. `scopes.md` 4절의 규칙 제외 목록이며 사유는 `build-output`(의존성·산출물 디렉터리), `lockfile`, `snapshot`, `minified`(`*.min.*`, `*.map`), `generated`(생성 코드)입니다.
 
-**`[SKIPPED]`**: `<경로>` 탭 `<사유>`. 사유는 `size`(파일당 1 MiB 초과), `total-size`(`--full` 누적 10 MiB 초과), `filter`(clean/process 필터 대상).
+**`[SKIPPED]`**: `<경로>` 탭 `<사유>`. 사유는 `size`(파일당 1 MiB 초과), `total-size`(`--full` 누적 10 MiB 초과), `long-line`(64 KiB 초과이면서 줄 평균 500바이트 초과, `scopes.md` 3절), `filter`(clean/process 필터 대상), `unreadable`(untracked 파일을 읽지 못함).
 
 **`[WARNINGS]`**: 사람이 읽을 경고 줄. 예: `$TMPDIR` 대신 `/tmp` 사용, 커밋 메시지 50개 초과로 잘림, git 버전에 따른 제한. 보고서 "검토 한계"에 반영합니다.

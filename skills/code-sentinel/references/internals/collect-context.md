@@ -47,9 +47,10 @@
 |---|---|---|
 | 파일당 수집 상한 | 1 MiB (1,048,576 bytes) | `[SKIPPED] size`, partial |
 | `--full` 누적 수집 상한 | 10 MiB (10,485,760 bytes) | 이후 파일 `[SKIPPED] total-size`, partial |
+| 줄이 매우 긴 파일 | diff에 들어갈 분량 64 KiB (65,536 bytes) 초과이면서 줄 평균 500바이트 초과 | `[SKIPPED] long-line`, partial (`--include`로 경로를 정확히 지정하면 수집) |
 | 커밋 메시지 수집 개수 | 최근 50개 | 잘랐다는 사실을 `[WARNINGS]`에 기록 |
 | 분할 권장 기준 | 대상 파일 60개 또는 3,000줄 초과 | `split recommended` |
-| 일부만 분석 기준 | 대상 파일 300개 또는 20,000줄 초과 | `split truncated` |
+| 일부만 분석 기준 | 대상 파일 300개, 5,000줄, 분량(`target_bytes`) 256 KiB (262,144 bytes) 중 하나라도 초과 | `split truncated` |
 | 오래된 임시 디렉터리 기준 (`cleanup-context.sh --stale`) | 1440분 (24시간) | 검증을 통과한 것만 삭제 |
 | 검증 실행 타임아웃 (`run-verification.sh`) | 600초 | 자식 프로세스까지 종료, 종료 코드 11 |
 

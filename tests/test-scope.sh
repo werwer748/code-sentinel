@@ -299,6 +299,76 @@ git reset -q
 rm crlf.txt
 git config --unset core.autocrlf
 
+# ------------------------------------------------------------ 줄이 매우 긴 파일, 분량 기준(줄·바이트)
+RL="$TEST_ROOT/longline"
+new_repo "$RL"
+cd "$RL" || exit 1
+one_line_json() { # <개수> : 약 30바이트 항목을 한 줄에 이어 쓴 JSON (3000개면 약 90 KB)
+	awk -v n="$1" 'BEGIN { printf "["; for (i = 0; i < n; i++) printf "%s{\"id\":%d,\"name\":\"item-%d\"}", (i ? "," : ""), i, i; print "]" }'
+}
+one_line_json 3000 >data.json
+one_line_json 3000 >old.json
+printf 'a\n' >a.ts
+gcommit init
+
+# 수정(index 스냅샷): 스냅샷 파일 전체의 줄 평균으로 판정
+one_line_json 3100 >data.json
+git add data.json
+collect --scope staged
+assert_contains "long-line: 수정 파일(staged)" "$(mf_section "$M" SKIPPED)" "data.json	long-line"
+assert_eq "long-line: skipped 1" 1 "$(mf_get "$M" skipped)"
+assert_not_contains "long-line: diff 에서 빠짐" "$(diff_of)" "item-3050"
+collect --scope staged --include data.json
+assert_eq "long-line: --include 로 경로를 정확히 지정하면 수집" "" "$(mf_section "$M" SKIPPED)"
+assert_contains "long-line: 지정하면 diff 에 포함" "$(diff_of)" "item-3050"
+git reset -q
+
+# 작업 트리: untracked 신규, 수정, 삭제. 64 KiB 를 넘어도 줄이 짧으면 해당 없음
+one_line_json 3000 >new.json
+git rm -q old.json
+awk 'BEGIN { for (i = 0; i < 2000; i++) printf "export const value%04d = \"xxxxxxxxxxxxxxxxxxxx\";\n", i }' >wide.ts
+collect --scope changes --base main
+sk=$(mf_section "$M" SKIPPED)
+assert_contains "long-line: untracked 신규" "$sk" "new.json	long-line"
+assert_contains "long-line: 작업 트리 수정" "$sk" "data.json	long-line"
+assert_contains "long-line: 삭제" "$sk" "old.json	long-line"
+assert_not_contains "long-line: 줄이 짧은 큰 파일은 해당 없음" "$sk" "wide.ts"
+assert_contains "long-line: 줄이 짧은 큰 파일은 diff 에 포함" "$(diff_of)" "value1999"
+collect --scope full
+assert_contains "long-line: full" "$(mf_section "$M" SKIPPED)" "new.json	long-line"
+git reset -q
+git checkout -q -- .
+rm -f new.json wide.ts
+
+one_line_json 3000 >added.json
+gcommit "add json"
+collect --scope commit --ref HEAD
+assert_contains "long-line: commit 범위" "$(mf_section "$M" SKIPPED)" "added.json	long-line"
+
+# 분량 기준: 5,000줄 초과 또는 모델이 읽을 diff 256 KiB 초과면 truncated
+awk 'BEGIN { for (i = 0; i < 4000; i++) print "line" i }' >lines.ts
+git add lines.ts
+collect --scope staged
+assert_eq "4,000줄: split recommended" recommended "$(mf_get "$M" split)"
+awk 'BEGIN { for (i = 0; i < 5001; i++) print "line" i }' >lines.ts
+git add lines.ts
+collect --scope staged
+assert_eq "5,001줄: split truncated" truncated "$(mf_get "$M" split)"
+git reset -q
+rm lines.ts
+for f in w1 w2 w3; do
+	awk 'BEGIN { for (i = 0; i < 1100; i++) printf "export const v%04d = \"%090d\";\n", i, 0 }' >"$f.ts"
+done
+git add w1.ts w2.ts w3.ts
+collect --scope staged
+assert_eq "넓은 줄 3,300줄: 줄 수는 truncated 기준 이하" 3300 "$(mf_get "$M" target_lines)"
+tb=$(mf_get "$M" target_bytes)
+if [ "$((tb))" -gt 262144 ]; then pass "target_bytes 256 KiB 초과($tb)"; else fail "target_bytes 256 KiB 초과" "$tb"; fi
+assert_eq "diff 256 KiB 초과: split truncated" truncated "$(mf_get "$M" split)"
+assert_eq "줄 평균 500바이트 이하면 long-line 아님" 0 "$(mf_get "$M" skipped)"
+git reset -q
+rm w1.ts w2.ts w3.ts
+
 # ------------------------------------------------------------ 심볼릭 링크·submodule 항목
 R6="$TEST_ROOT/links"
 new_repo "$R6"
@@ -395,5 +465,13 @@ assert_eq "PR 객체 없음: diff_mode gh-diff" gh-diff "$(mf_get "$M" diff_mode
 assert_contains "PR gh-diff: 패치에서 파일 목록" "$(files)" "A	feature.txt"
 assert_eq "PR gh-diff: 로컬 HEAD 불일치" no "$(mf_get "$M" local_head_matches)"
 assert_contains "PR gh-diff: diff-only 경고" "$(mf_section "$M" WARNINGS)" "diff-only"
+
+# gh-diff 모드는 객체가 없으므로 패치에서 센 분량으로 long-line 을 판정
+awk 'BEGIN { printf "["; for (i = 0; i < 3000; i++) printf "%s{\"id\":%d,\"name\":\"item-%d\"}", (i ? "," : ""), i, i; print "]" }' >"$TEST_ROOT/big.json"
+(cd "$TEST_ROOT" && git diff --no-index -- /dev/null big.json >>"$FAKE_GH_PATCH") || true
+PATH="$FAKEBIN:$PATH" collect --scope pr --pr 1
+assert_contains "PR gh-diff: long-line" "$(mf_section "$M" SKIPPED)" "big.json	long-line"
+assert_not_contains "PR gh-diff: long-line 은 diff 에서 빠짐" "$(diff_of)" "item-2999"
+assert_contains "PR gh-diff: 다른 파일은 그대로" "$(files)" "A	feature.txt"
 
 finish
