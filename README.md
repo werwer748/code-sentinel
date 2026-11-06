@@ -79,7 +79,12 @@ code-sentinel은 스스로 읽기 전용 규칙을 지키지만, 도구 수준�
 - **대형 변경:** 5,000줄 또는 diff 256 KiB를 넘으면 위험 경로부터 그 분량까지만 읽고 `partial`로 표시합니다. 나머지는 보고서 끝의 `--files` 호출 예시로 이어서 검토합니다.
 - **기본 제외:** lockfile, 빌드 산출물, minified, 스냅샷, 생성 코드는 리뷰하지 않습니다(`--files`로 명시하면 포함). lockfile은 manifest와의 일치 여부만 확인합니다.
 - **임시 디렉터리:** 리뷰 도중 AI 도구가 비정상 종료되면(사용량 한도, 강제 종료 등) 정리 단계가 실행되지 않아 `${TMPDIR}/code-sentinel.*`가 남을 수 있습니다. `skills/code-sentinel/scripts/cleanup-context.sh --stale`로 하루(1440분)가 지난 것을 지울 수 있습니다.
-- **리뷰 품질:** 실제 도구 검증(2라운드)에서 8개 조합 중 4개만 합격했습니다. 불합격 원인은 모델의 심각도·영역 판단이 기대값과 다른 것(서버 전용 모듈 import를 `correctness`로 분류, `latest`·root Dockerfile을 Low로 판단)과 Low 항목 누락입니다. 자세한 내용은 [tests/REVIEW-QUALITY.md](tests/REVIEW-QUALITY.md)에 있습니다.
+- **리뷰 품질:** 실제 도구 검증 3라운드(2026-10-30)에서 Codex·Claude Code와 픽스처 4개의 8개 조합이 모두 합격했습니다(조합마다 3회 실행, 가장 낮은 결과 기준).
+  - 두 도구의 옵션 해석은 입력 5개 모두 같았고, 출력 형식 오류·읽기 전용 위반·임시 디렉터리 잔존 같은 도구 결함은 없었습니다.
+  - 놓친 항목은 라벨 없는 input(FE-07, Low) 하나입니다.
+  - 2라운드(8개 중 4개 합격)의 불합격 원인 중 두 가지는 기대값을 다시 검토해 고쳤습니다(FE-01 영역, IN-02 최소 심각도).
+  - 3라운드 뒤의 토큰 절감 변경(긴 줄 파일 생략, 대형 변경 기준, 요청 문구 처리)은 Claude Code 1회 실행으로만 확인했습니다.
+  - 자세한 내용은 [tests/REVIEW-QUALITY.md](tests/REVIEW-QUALITY.md)에 있습니다.
 
 ## 개발
 
